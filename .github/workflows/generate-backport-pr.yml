@@ -56,7 +56,7 @@ jobs:
             --title "Backport PR #${{ github.event.pull_request.number }} to bee" \
             --body "This PR backports #${{ github.event.pull_request.number }} to \`bee\`." \
             --head backport-pr-${{ github.event.pull_request.number }}-to-bee \
-            --base bee
+            --base bee \
             --reviewer "${{ steps.pr_author.outputs.author }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
