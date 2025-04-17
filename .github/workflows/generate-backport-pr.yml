@@ -46,18 +46,20 @@ jobs:
           BRANCH_NAME="backport-pr-${PR_NUMBER}-to-bee"
           git push origin $BRANCH_NAME
 
-      - name: Extract original PR author
-        id: pr_author
-        run: echo "author=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
+      - name: Extract original PR metadata
+        id: pr_meta
+        run: |
+          echo "title=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
+          echo "author=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Create pull request with GitHub CLI
         run: |
           gh pr create \
             --title "Backport PR #${{ github.event.pull_request.number }} to bee" \
-            --body "This PR backports #${{ github.event.pull_request.number }} to \`bee\`." \
+            --body "This PR backports #${{ github.event.pull_request.number }} to \`bee\`.\n\n**Original PR title:** ${{ steps.pr_meta.outputs.title }}" \
             --head backport-pr-${{ github.event.pull_request.number }}-to-bee \
             --base bee \
-            --reviewer "${{ steps.pr_author.outputs.author }}"
+            --reviewer "${{ steps.pr_meta.outputs.author }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
