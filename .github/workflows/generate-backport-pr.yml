@@ -39,12 +39,16 @@ jobs:
         run: |
           MERGE_COMMIT=${{ github.event.pull_request.merge_commit_sha }}
           git cherry-pick -m 1 $MERGE_COMMIT || echo "::warning ::Cherry-pick had conflicts. Manual intervention might be required."
-
+        
       - name: Push backport branch
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           BRANCH_NAME="backport-pr-${PR_NUMBER}-to-bee"
           git push origin $BRANCH_NAME
+
+      - name: Extract original PR author
+        id: pr_author
+        run: echo "author=$(jq -r .pull_request.user.login "$GITHUB_EVENT_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Create pull request with GitHub CLI
         run: |
@@ -53,6 +57,7 @@ jobs:
             --body "This PR backports #${{ github.event.pull_request.number }} to \`bee\`." \
             --head backport-pr-${{ github.event.pull_request.number }}-to-bee \
             --base bee
+            --reviewer "${{ steps.pr_author.outputs.author }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
