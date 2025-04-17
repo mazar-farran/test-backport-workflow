@@ -1,0 +1,55 @@
+name: Backport Release fixes to bee branch
+
+on:
+  pull_request:
+    branches:
+      - release/**
+    types: [closed]
+
+jobs:
+  backport:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history is needed for cherry-pick
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Fetch target branch
+        run: git fetch origin bee
+
+      - name: Create backport branch
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          BRANCH_NAME="backport-pr-${PR_NUMBER}-to-bee"
+          git checkout -b $BRANCH_NAME origin/bee
+
+      - name: Cherry-pick the merged commit
+        run: |
+          MERGE_COMMIT=${{ github.event.pull_request.merge_commit_sha }}
+          git cherry-pick -m 1 $MERGE_COMMIT || echo "::warning ::Cherry-pick had conflicts. Manual intervention might be required."
+
+      - name: Push backport branch
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          BRANCH_NAME="backport-pr-${PR_NUMBER}-to-bee"
+          git push origin $BRANCH_NAME
+
+      - name: Create pull request with GitHub CLI
+        run: |
+          gh pr create \
+            --title "Backport PR #${{ github.event.pull_request.number }} to bee" \
+            --body "This PR backports #${{ github.event.pull_request.number }} to \`bee\`." \
+            --head backport-pr-${{ github.event.pull_request.number }}-to-bee \
+            --base bee
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+
